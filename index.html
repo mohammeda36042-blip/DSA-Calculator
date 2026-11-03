@@ -53,6 +53,7 @@ button.run,.ctl button{background:var(--acc);color:var(--accink);border:0;paddin
 .w{fill:var(--ink);font:12px ui-monospace,monospace;text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:4px}
 table{border-collapse:collapse;font:.9rem ui-monospace,Menlo,monospace;margin:10px auto 0}
 td,th{border:1px solid var(--line);padding:4px 11px;text-align:center}th{background:var(--code)}
+.ht{display:flex;flex-direction:column;gap:8px}.ht .row{margin:0;justify-content:flex-start;flex-wrap:nowrap}.idx{background:var(--code)}.mt{color:var(--mute);font:.85rem ui-monospace,monospace}
 .stage.col{flex-direction:column;align-items:center}
 @media (max-width:720px){.wrap{display:block}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}nav h1,nav .grp{width:100%}nav button{width:auto}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -105,6 +106,10 @@ const sorter=a=>{const ok=new Set(),F=[];return{ok,F,fr:(o,m)=>{const h={};ok.fo
 const gE={id:'edges',label:'Edges, one per line: from to weight',type:'area',def:'A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nE D 4\nD F 11'};
 const gD={id:'dir',label:'Edges are',type:'select',opts:['undirected','directed'],def:'undirected'};
 
+const TOMB=Symbol('deleted');
+const hts=(tb,chain,hl={})=>`<div class="ht">${tb.map((b,i)=>`<div class="row">${cell(i,'idx '+(hl[i]||''))}${chain?(b.length?b.map((v,j)=>'<b class="ar">→</b>'+cell(v,hl[i+','+j]||'')).join(''):'<span class="mt">empty</span>'):cell(b===null?'':b===TOMB?'×':b,hl[i]||'')}</div>`).join('')}</div>`;
+const hf=(k,m)=>{if(/^-?\d+$/.test(k)){const i=((Number(k)%m)+m)%m;return[i,`${k} mod ${m} = ${i}`]}const sum=[...k].reduce((a,c)=>a+c.charCodeAt(0),0),i=sum%m;return[i,`(sum of character codes ${sum}) mod ${m} = ${i}`]};
+const adjOf=(nodes,e,dir)=>{const a={};nodes.forEach(n=>a[n]=[]);e.forEach((k,i)=>{a[k.u].push([k.v,i]);if(!dir)a[k.v].push([k.u,i])});return a};
 /* ---------- tools: run() returns frames [{h: html, m: message}] ---------- */
 const T=[
 {g:'Basic structures',id:'array',name:'Array',cx:'Access O(1) · search O(n) · insert/delete O(n)',
@@ -153,6 +158,29 @@ const T=[
   const o=io(root),hl={};o.forEach((v,i)=>{hl[v]='ok';P({...hl},'Inorder visit: '+o.slice(0,i+1).join(', '))});
   P({},`Inorder:   ${o}\nPreorder:  ${pr(root)}\nPostorder: ${po(root)}\nHeight ${ht(root)}, ${o.length} nodes`);return F}},
 
+{id:'hash',name:'Hashing',cx:'Hash table · insert/search/delete O(1) on average · O(n) worst case',
+ f:[{id:'o',label:'Commands: insert key, search key, delete key (numbers or words)',type:'area',def:'insert 15, insert 25, insert 35, insert 7, search 25, delete 15, search 35'},{id:'m',label:'Table size (2–20)',def:'10'},{id:'method',label:'Collision handling',type:'select',opts:['chaining','linear probing','quadratic probing'],def:'chaining'}],
+ run(x){const m=parseInt(x.m);if(!(m>=2&&m<=20))throw Error('Table size must be between 2 and 20.');const chain=x.method==='chaining',quad=x.method==='quadratic probing';
+  const tb=Array.from({length:m},()=>chain?[]:null);let n=0;const F=[{h:hts(tb,chain),m:`Empty table with ${m} buckets, using ${x.method}`}],P=(hl,msg)=>F.push({h:hts(tb,chain,hl),m:msg});
+  for(const[c,k]of cmds(x.o)){const op=c.toLowerCase();if(!['insert','search','delete'].includes(op))throw Error('Unknown command: '+c);if(k===undefined)throw Error(c+' needs a key.');
+   const[h0,why]=hf(k,m),head=`${op} ${k}: hash = ${why}`;
+   if(chain){const b=tb[h0],j=b.indexOf(k);
+    if(op==='insert'){if(j>=0)P({[h0+','+j]:'cmp'},head+'\nAlready present, nothing added');else{b.push(k);n++;P({[h0+','+(b.length-1)]:'new'},head+(b.length>1?'\nCollision: added to the end of the chain':'')+`\nLoad factor ${(n/m).toFixed(2)}`)}}
+    else{P({[h0]:'cmp'},head);for(let t=0;t<b.length;t++){P({[h0+','+t]:b[t]===k?(op==='delete'?'del':'ok'):'cmp'},b[t]===k?(op==='delete'?`Found ${k}: unlink it`:`Found ${k}`):`${b[t]} is not ${k}, next in chain`);if(b[t]===k)break}
+     if(j<0)P({},`${k} is not in the table`);else if(op==='delete'){b.splice(j,1);n--;P({},`Deleted ${k}`)}}}
+   else{const slot=i=>(h0+(quad?i*i:i))%m,pre=i=>i?'':head+'\n';
+    if(op==='insert'){let r=0;for(let i=0;i<m&&!r;i++){const s=slot(i),v=tb[s];
+      if(v===k){P({[s]:'cmp'},pre(i)+`Slot ${s} already holds ${k}`);r=1}
+      else if(v===null||v===TOMB){tb[s]=k;n++;P({[s]:'new'},pre(i)+`Slot ${s} is free: stored\nLoad factor ${(n/m).toFixed(2)}`);r=1}
+      else P({[s]:'cmp'},pre(i)+`Slot ${s} holds ${v}: collision, probe again`)}
+     if(!r)P({},'No free slot reachable: the table is full'+(quad?' or the probe sequence cycles':''))}
+    else{let r=0;for(let i=0;i<m&&!r;i++){const s=slot(i),v=tb[s];
+      if(v===null){P({[s]:'cmp'},pre(i)+`Slot ${s} is empty: ${k} is not in the table`);r=1}
+      else if(v===k){P({[s]:op==='delete'?'del':'ok'},pre(i)+`Found ${k} in slot ${s}`);r=1;if(op==='delete'){tb[s]=TOMB;n--;P({},'Marked × (deleted) so later searches keep probing past this slot')}}
+      else P({[s]:'cmp'},pre(i)+`Slot ${s} ${v===TOMB?'was deleted: keep probing':'holds '+v+': keep probing'}`)}
+     if(!r)P({},`${k} is not in the table`)}}}
+  return F}},
+
 {g:'Searching and sorting',id:'bs',name:'Binary search',cx:'O(log n) — array must be sorted',
  f:[{id:'a',label:'Sorted array',def:'2, 5, 8, 12, 16, 23, 38, 56, 72, 91'},{id:'t',label:'Target',def:'23'}],
  run(x){const a=nums(x.a),t=Number(x.t),F=[];for(let i=1;i<a.length;i++)if(a[i]<a[i-1])throw Error('Array is not sorted ascending. Sort it first.');let lo=0,hi=a.length-1,n=0;
@@ -181,6 +209,25 @@ const T=[
    for(let j=l;j<h;j++){cmp++;fr({[h]:'piv',[j]:'cmp'},`Is ${a[j]} < ${p}?`);if(a[j]<p){if(i!==j){[a[i],a[j]]=[a[j],a[i]];sw++}fr({[h]:'piv',[i]:'swp',[j]:'swp'},`Yes: ${a[i]} goes to the left side`);i++}}
    [a[i],a[h]]=[a[h],a[i]];sw++;ok.add(i);fr({},`Pivot ${p} lands in its final place, index ${i}`);qs(l,i-1);qs(i+1,h)};
   qs(0,a.length-1);a.forEach((_,k)=>ok.add(k));fr({},`Sorted: [${a}]\nComparisons: ${cmp}, swaps: ${sw}`);return F}},
+
+{g:'Graph traversal',id:'bfs',name:'Breadth-first search',cx:'O(V + E) · explores level by level using a queue · finds fewest-edge paths',
+ f:[gE,gD,{id:'s',label:'Start node',def:'A'}],
+ run(x){const{e,nodes}=parseEdges(x.edges),dir=x.dir==='directed',s=x.s.trim();if(!nodes.includes(s))throw Error('Start node not in graph. Nodes: '+nodes.join(', '));
+  const adj=adjOf(nodes,e,dir),seen=new Set([s]),done=new Set(),q=[s],lv={[s]:0},ed={},F=[],order=[];
+  const P=(cur,m)=>{const n={};done.forEach(k=>n[k]='ok');q.forEach(k=>n[k]='new');if(cur)n[cur]='cur';F.push({h:gsvg(nodes,e,dir,{n,e:{...ed},l:{...lv}})+que(q),m})};
+  P(null,`Start: put ${s} in the queue. Numbers under nodes are levels (edges from ${s}).`);
+  while(q.length){const u=q.shift(),found=[];order.push(u);for(const[v,i]of adj[u])if(!seen.has(v)){seen.add(v);q.push(v);lv[v]=lv[u]+1;ed[i]='tree';found.push(v)}
+   P(u,`Dequeue ${u}. ${found.length?'Discovered and queued: '+found.join(', '):'No new neighbours'}`);done.add(u)}
+  P(null,'Visit order: '+order.join(' → ')+(order.length<nodes.length?'\nNot reachable: '+nodes.filter(n=>!seen.has(n)).join(', '):''));return F}},
+
+{id:'dfs',name:'Depth-first search',cx:'O(V + E) · goes as deep as possible, then backtracks, using a stack',
+ f:[gE,gD,{id:'s',label:'Start node',def:'A'}],
+ run(x){const{e,nodes}=parseEdges(x.edges),dir=x.dir==='directed',s=x.s.trim();if(!nodes.includes(s))throw Error('Start node not in graph. Nodes: '+nodes.join(', '));
+  const adj=adjOf(nodes,e,dir),seen=new Set(),done=new Set(),st=[],lab={},ed={},F=[];let c=0;
+  const P=(cur,m)=>{const n={};done.forEach(k=>n[k]='ok');st.forEach(k=>n[k]='new');if(cur)n[cur]='cur';F.push({h:gsvg(nodes,e,dir,{n,e:{...ed},l:{...lab}})+stk(st),m})};
+  const go=u=>{seen.add(u);lab[u]=++c;st.push(u);P(u,`Visit ${u} (number ${c}) and push it on the stack`);for(const[v,i]of adj[u])if(!seen.has(v)){ed[i]='tree';go(v)}
+   st.pop();done.add(u);P(st[st.length-1]||null,`${u} has no unvisited neighbours: pop it${st.length?' and backtrack to '+st[st.length-1]:''}`)};
+  go(s);P(null,'Visit order: '+nodes.filter(n=>lab[n]).sort((a,b)=>lab[a]-lab[b]).join(' → ')+'\nNumbers under nodes show the order they were visited.'+(c<nodes.length?'\nNot reachable: '+nodes.filter(n=>!seen.has(n)).join(', '):''));return F}},
 
 {g:'Graph algorithms',id:'dij',name:"Dijkstra's algorithm",cx:'Shortest paths from one source · O(V²) here · no negative weights',
  f:[gE,gD,{id:'s',label:'Source node',def:'A'}],
@@ -223,7 +270,7 @@ T.forEach(t=>{if(t.g&&t.g!==lg){lg=t.g;const g=document.createElement('div');g.c
 function show(t){stop();cur=t;history.replaceState(null,'','#'+t.id);nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.id===t.id));
  $('#title').textContent=t.name;$('#cx').textContent=t.cx;
  $('#form').innerHTML=t.f.map(f=>`<div class="f"><label for="f_${f.id}">${f.label}</label>`+(f.type==='area'?`<textarea id="f_${f.id}" spellcheck="false">${esc(f.def)}</textarea>`:f.type==='select'?`<select id="f_${f.id}">${f.opts.map(o=>`<option${o===f.def?' selected':''}>${o}</option>`).join('')}</select>`:`<input id="f_${f.id}" value="${esc(f.def)}" spellcheck="false">`)+'</div>').join('');run()}
-function draw(){const f=FR[pos],s=$('#stage');s.innerHTML=f.h;s.classList.toggle('col',f.h.includes('<table'));$('#msg').textContent=f.m;$('#sl').max=FR.length-1;$('#sl').value=pos;$('#cnt').textContent=(pos+1)+' / '+FR.length}
+function draw(){const f=FR[pos],s=$('#stage');s.innerHTML=f.h;s.classList.toggle('col',f.h.includes('<table')||f.h.includes('</svg><'));$('#msg').textContent=f.m;$('#sl').max=FR.length-1;$('#sl').value=pos;$('#cnt').textContent=(pos+1)+' / '+FR.length}
 function stop(){clearInterval(timer);timer=null;$('#play').textContent='Play'}
 function play(){if(timer)return stop();if(pos>=FR.length-1)pos=0;$('#play').textContent='Pause';draw();timer=setInterval(()=>{if(pos>=FR.length-1)return stop();pos++;draw()},+$('#spd').value)}
 function run(){stop();const x={};cur.f.forEach(f=>x[f.id]=$('#f_'+f.id).value);
