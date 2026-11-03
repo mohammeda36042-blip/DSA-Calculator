@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSA Visualizer</title>
+<style>
+:root{--bg:#f4f5f0;--panel:#fff;--ink:#1d2421;--mute:#5d6862;--line:#d4dad3;--acc:#1f6f5c;--accink:#fff;--code:#eaeee9;--err:#c4573f;--cmp:#f2c14e;--swp:#e8836b;--ok:#8fd0a6;--piv:#b9a3e3;--new:#7fc4d8;--grid:#e3e7e0}
+@media (prefers-color-scheme:dark){:root{--bg:#141a17;--panel:#1c2420;--ink:#e6ece8;--mute:#9aa7a0;--line:#2e3a34;--acc:#5cc7a6;--accink:#0f1a15;--code:#222d27;--err:#e0735a;--cmp:#b98a22;--swp:#c4573f;--ok:#3f8f63;--piv:#7d63b8;--new:#3b8aa3;--grid:#1b231f}}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font:16px/1.5 Georgia,serif;background:var(--bg) linear-gradient(var(--grid) 1px,transparent 1px) 0 0/24px 24px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/24px 24px}
+.wrap{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+nav{border-right:1px solid var(--line);background:var(--bg);padding:20px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+nav h1{font-size:1.15rem;margin:0 8px 14px}
+nav button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:7px 10px;border-radius:6px;font:inherit;font-size:.95rem;cursor:pointer}
+nav button:hover{background:var(--code)}
+nav button[aria-current=true]{background:var(--acc);color:var(--accink)}
+nav .grp{margin:14px 10px 4px;color:var(--mute);font-size:.85rem}
+main{padding:28px clamp(16px,4vw,44px);max-width:960px}
+h2{margin:0 0 2px;font-size:1.7rem}
+.cx{color:var(--mute);margin:0 0 18px}
+.f{margin:0 0 12px}
+label{display:block;font-size:.88rem;color:var(--mute);margin-bottom:3px}
+input,textarea,select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font:.92rem ui-monospace,Menlo,Consolas,monospace}
+textarea{min-height:100px;resize:vertical}
+button.run,.ctl button{background:var(--acc);color:var(--accink);border:0;padding:9px 20px;border-radius:6px;font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.board{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.ctl button{padding:6px 14px}
+.ctl input[type=range]{flex:1;min-width:120px;padding:0}
+.ctl select{width:auto;padding:5px}
+.stage{min-height:200px;overflow-x:auto;padding:14px 4px 30px;display:flex;justify-content:center}
+.msg{white-space:pre-wrap;font:.92rem/1.5 ui-monospace,Menlo,Consolas,monospace;background:var(--code);border-radius:8px;padding:10px 12px;min-height:44px}
+.errbox{margin-top:22px;color:var(--err);border:1px solid var(--err);border-radius:8px;padding:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px 6px;align-items:center;margin-bottom:22px;justify-content:center}
+.c{position:relative;min-width:46px;height:46px;padding:0 8px;display:flex;align-items:center;justify-content:center;background:var(--panel);border:2px solid var(--ink);border-radius:6px;box-shadow:0 4px 0 var(--ink);font:600 1rem ui-monospace,Menlo,monospace;transition:background .2s}
+.c small{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:7px;font:.72rem ui-monospace,Menlo,monospace;color:var(--mute);white-space:nowrap}
+.cmp{background:var(--cmp)!important}.swp{background:var(--swp)!important}.ok{background:var(--ok)!important}.piv{background:var(--piv)!important}.new{background:var(--new)!important}.del{background:var(--swp)!important;opacity:.8}.dim{opacity:.3}
+.ar{color:var(--mute);font-size:1.3rem}.nul{border-style:dashed;box-shadow:none;color:var(--mute)}
+.stk{display:flex;flex-direction:column-reverse;gap:8px;width:110px;min-height:60px;border:3px solid var(--ink);border-top:0;padding:10px;border-radius:0 0 12px 12px;align-self:flex-end}
+.stk small{left:calc(100% + 12px);top:50%;transform:translateY(-50%);margin:0}
+.bars{display:flex;align-items:flex-end;gap:5px;height:230px;width:100%;max-width:640px;border-bottom:3px solid var(--ink)}
+.b{flex:1;min-width:10px;background:var(--acc);border-radius:5px 5px 0 0;position:relative;transition:height .15s}
+.b span{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:.72rem ui-monospace,monospace;color:var(--mute)}
+.svg{width:100%;height:auto;color:var(--mute)}
+.svg line{stroke:var(--mute);stroke-width:2}
+.nd circle{fill:var(--panel);stroke:var(--ink);stroke-width:2.5;transition:fill .2s}
+.nd text{text-anchor:middle;fill:var(--ink);font:600 13px ui-monospace,monospace}
+.nd.cmp circle,.nd.cur circle{fill:var(--cmp)}.nd.ok circle{fill:var(--ok)}.nd.new circle{fill:var(--new)}.nd.del circle{fill:var(--swp)}
+.nd .lb{font:600 12px ui-monospace,monospace;fill:var(--ink)}
+.ed{stroke:var(--mute);stroke-width:2.5;fill:none}.ed.tree{stroke:var(--acc);stroke-width:5}.ed.hot{stroke:var(--cmp);stroke-width:5}.ed.skip{stroke:var(--err);stroke-dasharray:6 5}
+.w{fill:var(--ink);font:12px ui-monospace,monospace;text-anchor:middle;paint-order:stroke;stroke:var(--panel);stroke-width:4px}
+table{border-collapse:collapse;font:.9rem ui-monospace,Menlo,monospace;margin:10px auto 0}
+td,th{border:1px solid var(--line);padding:4px 11px;text-align:center}th{background:var(--code)}
+.stage.col{flex-direction:column;align-items:center}
+@media (max-width:720px){.wrap{display:block}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px}nav h1,nav .grp{width:100%}nav button{width:auto}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav id="nav"><h1>DSA Visualizer</h1></nav>
+<main>
+<h2 id="title"></h2><p class="cx" id="cx"></p>
+<div id="form"></div><button class="run" id="run">Calculate and animate</button>
+<div id="err"></div>
+<div class="board" id="board" hidden>
+ <div class="ctl"><button id="prev">Back</button><button id="play">Play</button><button id="next">Next</button>
+ <input type="range" id="sl" min="0" value="0" aria-label="Step"><span id="cnt"></span>
+ <select id="spd" aria-label="Speed"><option value="1100">Slow</option><option value="650" selected>Normal</option><option value="250">Fast</option></select></div>
+ <div class="stage" id="stage"></div><div class="msg" id="msg" aria-live="polite"></div>
+</div>
+</main>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const INF='∞';
+const nums=s=>{const a=s.split(/[\s,]+/).filter(Boolean).map(Number);if(!a.length||a.some(isNaN))throw Error('Enter numbers separated by commas or spaces.');if(a.length>30)throw Error('Use at most 30 numbers so the picture stays readable.');return a};
+const cmds=s=>s.split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean).map(x=>x.split(/\s+/));
+const parseEdges=s=>{const e=s.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split(/[\s,]+/);if(p.length<2)throw Error('Each line needs: from to [weight]. Problem line: '+l);const w=p[2]===undefined?1:Number(p[2]);if(isNaN(w))throw Error('Weight is not a number in: '+l);return{u:p[0],v:p[1],w}});if(!e.length)throw Error('Add at least one edge.');const nodes=[...new Set(e.flatMap(x=>[x.u,x.v]))];if(nodes.length>12)throw Error('Use at most 12 nodes.');return{e,nodes}};
+
+/* ---------- pictures ---------- */
+const cell=(v,c='',s='')=>`<div class="c ${c}">${esc(v)}<small>${esc(s)}</small></div>`;
+const row=(a,hl={},lab={})=>`<div class="row">${a.length?a.map((v,i)=>cell(v,hl[i]||'',i+(lab[i]?' '+lab[i]:''))).join(''):'<em>empty</em>'}</div>`;
+const bars=(a,hl={})=>{const mx=Math.max(...a.map(Math.abs),1);return`<div class="bars">${a.map((v,i)=>`<div class="b ${hl[i]||''}" style="height:${Math.max(3,Math.abs(v)/mx*100)}%"><span>${v}</span></div>`).join('')}</div>`};
+const stk=(s,hl)=>`<div class="stk">${s.map((v,i)=>cell(v,hl===i?'new':'',i===s.length-1?'top':'')).join('')}</div>`;
+const que=(q,hl)=>`<div class="row">${q.length?q.map((v,i)=>cell(v,hl===i?'new':'',(i===0?'front ':'')+(i===q.length-1?'rear':''))).join(''):'<em>empty</em>'}</div>`;
+const lst=(a,hl={})=>`<div class="row">${a.map((v,i)=>cell(v,hl[i]||'',i?'':'head')+'<b class="ar">→</b>').join('')}<div class="c nul">null</div></div>`;
+const tsvg=(root,hl={})=>{const ns=[];let c=0;const go=(n,d)=>{if(!n)return;go(n.l,d+1);n.x=c++;n.d=d;ns.push(n);go(n.r,d+1)};go(root,0);
+ if(!ns.length)return'<em>empty tree</em>';const W=Math.max(c*46,60)+20,H=(Math.max(...ns.map(n=>n.d))+1)*62+10,X=n=>n.x*46+33,Y=n=>n.d*62+30;let s='';
+ ns.forEach(n=>[n.l,n.r].forEach(k=>k&&(s+=`<line x1="${X(n)}" y1="${Y(n)}" x2="${X(k)}" y2="${Y(k)}"/>`)));
+ ns.forEach(n=>s+=`<g class="nd ${hl[n.v]||''}"><circle cx="${X(n)}" cy="${Y(n)}" r="18"/><text x="${X(n)}" y="${Y(n)+5}">${n.v}</text></g>`);
+ return`<svg class="svg" viewBox="0 0 ${W} ${H}" style="min-width:${W}px;max-width:${W*1.5}px">${s}</svg>`};
+const gsvg=(nodes,edges,dir,o={})=>{const n=nodes.length,P={};nodes.forEach((k,i)=>{const t=2*Math.PI*i/n-Math.PI/2;P[k]=[210+150*Math.cos(t),170+125*Math.sin(t)]});
+ let s='<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>';
+ edges.forEach((e,i)=>{const a=P[e.u],b=P[e.v];const dx=b[0]-a[0],dy=b[1]-a[1],L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,px=-uy,py=ux,off=dir?24:0;
+  const x1=a[0]+ux*19,y1=a[1]+uy*19,x2=b[0]-ux*(dir?23:19),y2=b[1]-uy*(dir?23:19),cx=(a[0]+b[0])/2+px*off,cy=(a[1]+b[1])/2+py*off;
+  s+=`<path class="ed ${o.e?.[i]||''}" d="M${x1} ${y1}Q${cx} ${cy} ${x2} ${y2}"${dir?' marker-end="url(#ah)"':''}/><text class="w" x="${.25*x1+.5*cx+.25*x2+(dir?0:px*9)}" y="${.25*y1+.5*cy+.25*y2+(dir?0:py*9)+4}">${e.w}</text>`});
+ nodes.forEach(k=>s+=`<g class="nd ${o.n?.[k]||''}"><circle cx="${P[k][0]}" cy="${P[k][1]}" r="18"/><text x="${P[k][0]}" y="${P[k][1]+5}">${esc(k)}</text>${o.l?.[k]!==undefined?`<text class="lb" x="${P[k][0]}" y="${P[k][1]+34}">${o.l[k]}</text>`:''}</g>`);
+ return`<svg class="svg" viewBox="0 0 420 340" style="max-width:520px">${s}</svg>`};
+const mat=(d,nodes,k=-1,ch={})=>'<table><tr><th></th>'+nodes.map(n=>`<th>${esc(n)}</th>`).join('')+'</tr>'+d.map((r,i)=>`<tr><th>${esc(nodes[i])}</th>`+r.map((v,j)=>`<td class="${ch[i+','+j]?'new':i===k||j===k?'cmp':''}">${v===Infinity?INF:v}</td>`).join('')+'</tr>').join('')+'</table>';
+const sorter=a=>{const ok=new Set(),F=[];return{ok,F,fr:(o,m)=>{const h={};ok.forEach(i=>h[i]='ok');F.push({h:bars(a,Object.assign(h,o)),m})}}};
+const gE={id:'edges',label:'Edges, one per line: from to weight',type:'area',def:'A B 4\nA C 2\nB C 5\nB D 10\nC E 3\nE D 4\nD F 11'};
+const gD={id:'dir',label:'Edges are',type:'select',opts:['undirected','directed'],def:'undirected'};
+
+/* ---------- tools: run() returns frames [{h: html, m: message}] ---------- */
+const T=[
+{g:'Basic structures',id:'array',name:'Array',cx:'Access O(1) · search O(n) · insert/delete O(n)',
+ f:[{id:'a',label:'Array',def:'5, 3, 8, 1, 9, 2'},{id:'op',label:'Operation',type:'select',opts:['sum','average','min','max','sort ascending','reverse','search value','insert at index','delete at index','update at index'],def:'sum'},{id:'v',label:'Value (search, insert, update)',def:'7'},{id:'i',label:'Index (insert, delete, update)',def:'2'}],
+ run(x){const a=nums(x.a),v=Number(x.v),i=parseInt(x.i),F=[],R=(hl,m,arr=a)=>F.push({h:row(arr,hl),m});
+  const chk=mx=>{if(isNaN(i)||i<0||i>mx)throw Error('Index must be between 0 and '+mx+'.')};
+  const acc={sum:[0,(s,n)=>s+n],average:[0,(s,n)=>s+n],min:[Infinity,Math.min],max:[-Infinity,Math.max]};
+  if(acc[x.op]){let s=acc[x.op][0];R({},'Start');a.forEach((n,k)=>{s=acc[x.op][1](s,n);R({[k]:'cmp'},`a[${k}] = ${n}, running ${x.op==='average'?'sum':x.op} = ${s}`)});R({},x.op==='average'?'Average = '+s/a.length:x.op+' = '+s)}
+  else if(x.op==='sort ascending'){R({},'Before');const b=[...a].sort((p,c)=>p-c);R(Object.fromEntries(b.map((_,k)=>[k,'ok'])),'Sorted',b)}
+  else if(x.op==='reverse'){R({},'Before');const b=[...a].reverse();R(Object.fromEntries(b.map((_,k)=>[k,'new'])),'Reversed',b)}
+  else if(x.op==='search value'){let f=-1;for(let k=0;k<a.length;k++){if(a[k]===v){f=k;R({[k]:'ok'},v+' found at index '+k);break}R({[k]:'cmp'},`a[${k}] = ${a[k]} is not ${v}`)}if(f<0)R({},v+' not found')}
+  else if(x.op==='insert at index'){chk(a.length);R({},'Before');R({[i]:'new'},`Inserted ${v} at index ${i}; later items shift right`,a.toSpliced(i,0,v))}
+  else if(x.op==='delete at index'){chk(a.length-1);R({[i]:'del'},'Delete a['+i+'] = '+a[i]);R({},'Later items shift left',a.toSpliced(i,1))}
+  else{chk(a.length-1);R({[i]:'del'},'Replace a['+i+'] = '+a[i]);R({[i]:'new'},'Now a['+i+'] = '+v,a.with(i,v))}
+  return F}},
+
+{id:'stack',name:'Stack',cx:'Push O(1) · pop O(1) · peek O(1) — last in, first out',
+ f:[{id:'o',label:'Commands: push n, pop, peek, size, isEmpty',type:'area',def:'push 5, push 8, push 2, pop, peek, push 9, size'}],
+ run(x){const s=[],F=[{h:stk(s),m:'Empty stack'}];for(const[c,v]of cmds(x.o)){let m,h;switch(c.toLowerCase()){case'push':if(v===undefined)throw Error('push needs a value.');s.push(v);m='push '+v;h=s.length-1;break;case'pop':m=s.length?'pop → '+s.pop():'pop → underflow: the stack is empty';break;case'peek':m='peek → '+(s.length?s[s.length-1]:'empty');h=s.length-1;break;case'size':m='size → '+s.length;break;case'isempty':m='isEmpty → '+!s.length;break;default:throw Error('Unknown command: '+c)}F.push({h:stk(s,h),m})}return F}},
+
+{id:'queue',name:'Queue',cx:'Enqueue O(1) · dequeue O(1) — first in, first out',
+ f:[{id:'o',label:'Commands: enqueue n, dequeue, front, size, isEmpty',type:'area',def:'enqueue 4, enqueue 7, enqueue 1, dequeue, front, enqueue 6, size'}],
+ run(x){const q=[],F=[{h:que(q),m:'Empty queue'}];for(const[c,v]of cmds(x.o)){let m,h;switch(c.toLowerCase()){case'enqueue':if(v===undefined)throw Error('enqueue needs a value.');q.push(v);m='enqueue '+v;h=q.length-1;break;case'dequeue':m=q.length?'dequeue → '+q.shift():'dequeue → underflow: the queue is empty';break;case'front':m='front → '+(q.length?q[0]:'empty');h=0;break;case'size':m='size → '+q.length;break;case'isempty':m='isEmpty → '+!q.length;break;default:throw Error('Unknown command: '+c)}F.push({h:que(q,h),m})}return F}},
+
+{id:'ll',name:'Linked list',cx:'Insert at head O(1) · insert at tail O(n) · search O(n)',
+ f:[{id:'o',label:'Commands: addFirst n, addLast n, insert index n, remove n, find n, reverse',type:'area',def:'addLast 3, addLast 5, addFirst 1, insert 2 9, remove 5, find 9, reverse'}],
+ run(x){const a=[],F=[{h:lst(a),m:'Empty list'}],P=(hl,m)=>F.push({h:lst(a,hl),m});
+  for(const[c,v,w]of cmds(x.o)){switch(c.toLowerCase()){
+   case'addfirst':a.unshift(v);P({0:'new'},'addFirst '+v+': new head');break;
+   case'addlast':a.push(v);P({[a.length-1]:'new'},'addLast '+v+': walk to the tail, link it');break;
+   case'insert':{const i=parseInt(v);if(isNaN(i)||i<0||i>a.length||w===undefined)throw Error('insert needs an index (0–'+a.length+') and a value.');a.splice(i,0,w);P({[i]:'new'},`insert ${w} at ${i}`)}break;
+   case'remove':{const i=a.indexOf(v);if(i<0){P({},'remove '+v+': not found');break}P({[i]:'del'},'remove '+v+': relink around it');a.splice(i,1);P({},'Removed '+v)}break;
+   case'find':{let f=false;for(let i=0;i<a.length;i++){if(a[i]===v){P({[i]:'ok'},v+' found at index '+i);f=true;break}P({[i]:'cmp'},'Visit '+a[i])}if(!f)P({},v+' not found')}break;
+   case'reverse':a.reverse();P(Object.fromEntries(a.map((_,i)=>[i,'new'])),'reverse: every link flipped');break;
+   default:throw Error('Unknown command: '+c)}}return F}},
+
+{id:'bst',name:'Binary search tree',cx:'Search/insert/delete O(h) — O(log n) balanced, O(n) worst',
+ f:[{id:'a',label:'Values to insert, in order',def:'50, 30, 70, 20, 40, 60, 80'},{id:'s',label:'Search for (optional)',def:'60'},{id:'d',label:'Delete (optional)',def:'30'}],
+ run(x){let root=null;const F=[],P=(hl,m)=>F.push({h:tsvg(root,hl),m});
+  const ins=(n,v)=>!n?{v,l:null,r:null}:(v<n.v?n.l=ins(n.l,v):v>n.v&&(n.r=ins(n.r,v)),n);const mn=n=>n.l?mn(n.l):n;
+  const del=(n,v)=>{if(!n)return n;if(v<n.v)n.l=del(n.l,v);else if(v>n.v)n.r=del(n.r,v);else{if(!n.l)return n.r;if(!n.r)return n.l;const m=mn(n.r);n.v=m.v;n.r=del(n.r,m.v)}return n};
+  const io=n=>n?[...io(n.l),n.v,...io(n.r)]:[],pr=n=>n?[n.v,...pr(n.l),...pr(n.r)]:[],po=n=>n?[...po(n.l),...po(n.r),n.v]:[],ht=n=>n?1+Math.max(ht(n.l),ht(n.r)):0;
+  nums(x.a).forEach(v=>{root=ins(root,v);P({[v]:'new'},`Insert ${v}: smaller goes left, larger goes right`)});
+  if(x.s.trim()){const v=Number(x.s),seen={};let n=root,f=false;while(n){seen[n.v]='cmp';if(v===n.v){seen[n.v]='ok';P(seen,`Search ${v}: found`);f=true;break}P(seen,`Search ${v}: at ${n.v}, go ${v<n.v?'left':'right'}`);n=v<n.v?n.l:n.r}if(!f)P(seen,`Search ${v}: not found`)}
+  if(x.d.trim()){const v=Number(x.d);if(io(root).includes(v)){P({[v]:'del'},'Delete '+v);root=del(root,v);P({},v+' removed (a node with two children takes its inorder successor)')}else P({},v+' is not in the tree')}
+  const o=io(root),hl={};o.forEach((v,i)=>{hl[v]='ok';P({...hl},'Inorder visit: '+o.slice(0,i+1).join(', '))});
+  P({},`Inorder:   ${o}\nPreorder:  ${pr(root)}\nPostorder: ${po(root)}\nHeight ${ht(root)}, ${o.length} nodes`);return F}},
+
+{g:'Searching and sorting',id:'bs',name:'Binary search',cx:'O(log n) — array must be sorted',
+ f:[{id:'a',label:'Sorted array',def:'2, 5, 8, 12, 16, 23, 38, 56, 72, 91'},{id:'t',label:'Target',def:'23'}],
+ run(x){const a=nums(x.a),t=Number(x.t),F=[];for(let i=1;i<a.length;i++)if(a[i]<a[i-1])throw Error('Array is not sorted ascending. Sort it first.');let lo=0,hi=a.length-1,n=0;
+  while(lo<=hi){const m=(lo+hi)>>1,hl={},lab={};n++;a.forEach((_,i)=>{if(i<lo||i>hi)hl[i]='dim'});hl[m]='cmp';[[lo,'lo'],[m,'mid'],[hi,'hi']].forEach(([i,s])=>lab[i]=(lab[i]?lab[i]+'/':'')+s);
+   if(a[m]===t){hl[m]='ok';F.push({h:row(a,hl,lab),m:`a[${m}] = ${t}: found in ${n} step${n>1?'s':''}`});return F}
+   F.push({h:row(a,hl,lab),m:`a[${m}] = ${a[m]} is ${a[m]<t?'less':'greater'} than ${t}: discard the ${a[m]<t?'left':'right'} half`});a[m]<t?lo=m+1:hi=m-1}
+  F.push({h:row(a,Object.fromEntries(a.map((_,i)=>[i,'dim']))),m:t+' not found'});return F}},
+
+{id:'bubble',name:'Bubble sort',cx:'Best O(n) · average/worst O(n²) · stable',
+ f:[{id:'a',label:'Numbers to sort',def:'64, 34, 25, 12, 22, 11, 90'}],
+ run(x){const a=nums(x.a),{ok,F,fr}=sorter(a);let cmp=0,sw=0;fr({},'Start');
+  for(let i=0;i<a.length-1;i++){let s=false;for(let j=0;j<a.length-1-i;j++){cmp++;fr({[j]:'cmp',[j+1]:'cmp'},`Compare ${a[j]} and ${a[j+1]}`);if(a[j]>a[j+1]){[a[j],a[j+1]]=[a[j+1],a[j]];sw++;fr({[j]:'swp',[j+1]:'swp'},`Swap: ${a[j]} now before ${a[j+1]}`);s=true}}ok.add(a.length-1-i);if(!s)break}
+  a.forEach((_,k)=>ok.add(k));fr({},`Sorted: [${a}]\nComparisons: ${cmp}, swaps: ${sw}`);return F}},
+
+{id:'merge',name:'Merge sort',cx:'O(n log n) always · O(n) extra space · stable',
+ f:[{id:'a',label:'Numbers to sort',def:'38, 27, 43, 3, 9, 82, 10'}],
+ run(x){const a=nums(x.a),{ok,F,fr}=sorter(a);let cmp=0;fr({},'Start');
+  const ms=(l,h)=>{if(l>=h)return;const m=(l+h)>>1;ms(l,m);ms(m+1,h);const L=a.slice(l,m+1),R=a.slice(m+1,h+1),hl={};for(let t=l;t<=h;t++)hl[t]='cmp';fr(hl,`Merge [${L}] and [${R}]`);
+   let i=0,j=0,k=l;while(i<L.length&&j<R.length){cmp++;a[k++]=L[i]<=R[j]?L[i++]:R[j++]}while(i<L.length)a[k++]=L[i++];while(j<R.length)a[k++]=R[j++];for(let t=l;t<=h;t++)hl[t]='piv';fr(hl,`Merged → [${a.slice(l,h+1)}]`)};
+  ms(0,a.length-1);a.forEach((_,k)=>ok.add(k));fr({},`Sorted: [${a}]\nComparisons: ${cmp}`);return F}},
+
+{id:'quick',name:'Quick sort',cx:'Average O(n log n) · worst O(n²) · in place',
+ f:[{id:'a',label:'Numbers to sort',def:'10, 80, 30, 90, 40, 50, 70'}],
+ run(x){const a=nums(x.a),{ok,F,fr}=sorter(a);let cmp=0,sw=0;fr({},'Start');
+  const qs=(l,h)=>{if(l>h)return;if(l===h){ok.add(l);return}const p=a[h];let i=l;fr({[h]:'piv'},`Pivot = ${p} (last item of this range)`);
+   for(let j=l;j<h;j++){cmp++;fr({[h]:'piv',[j]:'cmp'},`Is ${a[j]} < ${p}?`);if(a[j]<p){if(i!==j){[a[i],a[j]]=[a[j],a[i]];sw++}fr({[h]:'piv',[i]:'swp',[j]:'swp'},`Yes: ${a[i]} goes to the left side`);i++}}
+   [a[i],a[h]]=[a[h],a[i]];sw++;ok.add(i);fr({},`Pivot ${p} lands in its final place, index ${i}`);qs(l,i-1);qs(i+1,h)};
+  qs(0,a.length-1);a.forEach((_,k)=>ok.add(k));fr({},`Sorted: [${a}]\nComparisons: ${cmp}, swaps: ${sw}`);return F}},
+
+{g:'Graph algorithms',id:'dij',name:"Dijkstra's algorithm",cx:'Shortest paths from one source · O(V²) here · no negative weights',
+ f:[gE,gD,{id:'s',label:'Source node',def:'A'}],
+ run(x){const{e,nodes}=parseEdges(x.edges),dir=x.dir==='directed',s=x.s.trim();if(e.some(k=>k.w<0))throw Error("Dijkstra can't handle negative weights. Use Floyd–Warshall instead.");if(!nodes.includes(s))throw Error('Source node not in graph. Nodes: '+nodes.join(', '));
+  const adj={},d={},pe={},done=new Set(),F=[];nodes.forEach(n=>{adj[n]=[];d[n]=Infinity});d[s]=0;e.forEach((k,i)=>{adj[k.u].push([k.v,k.w,i]);if(!dir)adj[k.v].push([k.u,k.w,i])});
+  const P=(cur,hot,m)=>{const n={},ed={},l={};done.forEach(k=>n[k]='ok');if(cur)n[cur]='cur';Object.values(pe).forEach(i=>ed[i]='tree');hot.forEach(i=>ed[i]='hot');nodes.forEach(k=>l[k]=d[k]===Infinity?INF:d[k]);F.push({h:gsvg(nodes,e,dir,{n,e:ed,l}),m})};
+  P(s,[],'Start: distance to '+s+' is 0, everything else is unknown (∞)');
+  for(;;){let u=null;for(const n of nodes)if(!done.has(n)&&d[n]<Infinity&&(u===null||d[n]<d[u]))u=n;if(u===null)break;done.add(u);const hot=[];let m=`Settle ${u} (distance ${d[u]})`;
+   for(const[v,w,i]of adj[u])if(!done.has(v)&&d[u]+w<d[v]){d[v]=d[u]+w;pe[v]=i;hot.push(i);m+=`\nRelax ${v}: new distance ${d[v]}`}P(u,hot,m)}
+  const path=n=>{const p=[n];while(pe[p[0]]!==undefined){const k=e[pe[p[0]]];p.unshift(k.u===p[0]?k.v:k.u)}return p.join(' → ')};
+  P(null,[],'Shortest paths from '+s+':\n'+nodes.map(n=>`${n}: ${d[n]===Infinity?'unreachable':d[n]+'  ('+path(n)+')'}`).join('\n'));return F}},
+
+{id:'kru',name:"Kruskal's algorithm",cx:'Minimum spanning tree · O(E log E) · treats edges as undirected',
+ f:[gE],
+ run(x){const{e,nodes}=parseEdges(x.edges),p={},F=[],ed={},nd={};nodes.forEach(n=>p[n]=n);const find=n=>p[n]===n?n:p[n]=find(p[n]);let tot=0,cnt=0;
+  const P=m=>F.push({h:gsvg(nodes,e,false,{e:{...ed},n:{...nd}}),m});P('Sort edges by weight, then add each one that does not close a cycle.');
+  e.map((k,i)=>({...k,i})).sort((a,b)=>a.w-b.w).forEach(k=>{const a=find(k.u),b=find(k.v);if(a!==b){p[a]=b;ed[k.i]='tree';nd[k.u]=nd[k.v]='ok';tot+=k.w;cnt++;P(`Take ${k.u}–${k.v} (${k.w})`)}else{ed[k.i]='skip';P(`Skip ${k.u}–${k.v} (${k.w}): it would form a cycle`)}});
+  P(`Total weight: ${tot}${cnt<nodes.length-1?'\nGraph is disconnected, so this is a spanning forest':''}`);return F}},
+
+{id:'prim',name:"Prim's algorithm",cx:'Minimum spanning tree · O(V²) here · undirected',
+ f:[gE,{id:'s',label:'Start node',def:'A'}],
+ run(x){const{e,nodes}=parseEdges(x.edges),s=x.s.trim();if(!nodes.includes(s))throw Error('Start node not in graph. Nodes: '+nodes.join(', '));const inT=new Set([s]),F=[],ed={};let tot=0;
+  const P=(cur,m)=>{const n={};inT.forEach(k=>n[k]='ok');if(cur)n[cur]='cur';F.push({h:gsvg(nodes,e,false,{n,e:{...ed}}),m})};P(s,'Start growing the tree from '+s);
+  while(inT.size<nodes.length){let b=-1;e.forEach((k,i)=>{if(inT.has(k.u)!==inT.has(k.v)&&(b<0||k.w<e[b].w))b=i});if(b<0)break;const k=e[b],nw=inT.has(k.u)?k.v:k.u;inT.add(nw);ed[b]='tree';tot+=k.w;P(nw,`Cheapest edge leaving the tree: ${k.u}–${k.v} (${k.w}). Add ${nw}`)}
+  P(null,`Total weight: ${tot}${inT.size<nodes.length?'\nSome nodes are unreachable from the start node':''}`);return F}},
+
+{id:'fw',name:'Floyd–Warshall',cx:'All-pairs shortest paths · O(V³) · negative weights OK, no negative cycles',
+ f:[{...gE,def:'A B 3\nA D 7\nB A 8\nB C 2\nC A 5\nC D 1\nD A 2'},{...gD,def:'directed'}],
+ run(x){const{e,nodes}=parseEdges(x.edges),dir=x.dir==='directed',n=nodes.length,ix=Object.fromEntries(nodes.map((k,i)=>[k,i])),F=[];
+  const d=nodes.map((_,i)=>nodes.map((_,j)=>i===j?0:Infinity));e.forEach(k=>{const a=ix[k.u],b=ix[k.v];d[a][b]=Math.min(d[a][b],k.w);if(!dir)d[b][a]=Math.min(d[b][a],k.w)});
+  const P=(k,ch,m)=>F.push({h:gsvg(nodes,e,dir,k>=0?{n:{[nodes[k]]:'cur'}}:{})+mat(d,nodes,k,ch),m});P(-1,{},'Start: direct edges only');
+  for(let k=0;k<n;k++){const ch={};let c=0;for(let i=0;i<n;i++)for(let j=0;j<n;j++)if(d[i][k]+d[k][j]<d[i][j]){d[i][j]=d[i][k]+d[k][j];ch[i+','+j]=1;c++}P(k,ch,`Allow paths through ${nodes[k]}: ${c} shorter path${c===1?'':'s'} found (blue cells)`)}
+  if(d.some((r,i)=>r[i]<0))throw Error('Negative cycle detected: shortest paths are undefined.');P(-1,{},'Done. Row = from, column = to.');return F}}
+];
+
+/* ---------- app shell ---------- */
+let cur=T[0],FR=[],pos=0,timer=null;
+const nav=$('#nav');let lg='';
+T.forEach(t=>{if(t.g&&t.g!==lg){lg=t.g;const g=document.createElement('div');g.className='grp';g.textContent=t.g;nav.append(g)}const b=document.createElement('button');b.textContent=t.name;b.dataset.id=t.id;b.onclick=()=>show(t);nav.append(b)});
+function show(t){stop();cur=t;history.replaceState(null,'','#'+t.id);nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.id===t.id));
+ $('#title').textContent=t.name;$('#cx').textContent=t.cx;
+ $('#form').innerHTML=t.f.map(f=>`<div class="f"><label for="f_${f.id}">${f.label}</label>`+(f.type==='area'?`<textarea id="f_${f.id}" spellcheck="false">${esc(f.def)}</textarea>`:f.type==='select'?`<select id="f_${f.id}">${f.opts.map(o=>`<option${o===f.def?' selected':''}>${o}</option>`).join('')}</select>`:`<input id="f_${f.id}" value="${esc(f.def)}" spellcheck="false">`)+'</div>').join('');run()}
+function draw(){const f=FR[pos],s=$('#stage');s.innerHTML=f.h;s.classList.toggle('col',f.h.includes('<table'));$('#msg').textContent=f.m;$('#sl').max=FR.length-1;$('#sl').value=pos;$('#cnt').textContent=(pos+1)+' / '+FR.length}
+function stop(){clearInterval(timer);timer=null;$('#play').textContent='Play'}
+function play(){if(timer)return stop();if(pos>=FR.length-1)pos=0;$('#play').textContent='Pause';draw();timer=setInterval(()=>{if(pos>=FR.length-1)return stop();pos++;draw()},+$('#spd').value)}
+function run(){stop();const x={};cur.f.forEach(f=>x[f.id]=$('#f_'+f.id).value);
+ try{FR=cur.run(x);pos=0;$('#err').innerHTML='';$('#board').hidden=false;draw();play()}
+ catch(err){$('#board').hidden=true;$('#err').innerHTML='<div class="errbox" role="alert">'+esc(err.message)+'</div>'}}
+$('#run').onclick=run;$('#play').onclick=play;
+$('#prev').onclick=()=>{stop();pos=Math.max(0,pos-1);draw()};$('#next').onclick=()=>{stop();pos=Math.min(FR.length-1,pos+1);draw()};
+$('#sl').oninput=e=>{stop();pos=+e.target.value;draw()};
+show(T.find(t=>'#'+t.id===location.hash)||T[0]);
+</script>
+</body>
+</html>
